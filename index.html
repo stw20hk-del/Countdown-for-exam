@@ -1,0 +1,128 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>考試倒數 Dashboard</title>
+    <style>
+        body {
+            margin: 0;
+            background-color: #f0f4f8;
+            font-family: 'Helvetica Neue', Arial, sans-serif;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            overflow: hidden;
+        }
+        #card {
+            background: white;
+            padding: 50px;
+            border-radius: 30px;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.1);
+            text-align: center;
+            width: 80%;
+            max-width: 800px;
+            transition: all 0.5s ease;
+        }
+        h1 {
+            font-size: 4rem;
+            color: #333;
+            margin-bottom: 20px;
+        }
+        .countdown {
+            font-size: 8rem;
+            font-weight: bold;
+            color: #ff4757;
+            margin: 20px 0;
+        }
+        .date {
+            font-size: 1.8rem;
+            color: #747d8c;
+        }
+    </style>
+</head>
+<body>
+
+<div id="card">
+    <h1 id="subject">載入中...</h1>
+    <div class="countdown" id="days">-</div>
+    <div class="date" id="target-date"></div>
+</div>
+
+<script>
+    // 🔗 替換成你從 Google Sheet 獲取的 CSV 連結
+    const csvUrl = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vRCJNCE1_fcwIHpJjcCYUHxfWpKgaRVioX1tYKS7wEkX-jXIMRzuk6eVjfG0oi36Lwulk9aBIlr29QB/pub?output=csv'; 
+    let tasks = [];
+    let currentIndex = 0;
+
+    async function fetchTasks() {
+        try {
+            const response = await fetch(csvUrl);
+            const data = await response.text();
+            
+            // 解析 CSV (簡單拆行同逗號)
+            const rows = data.split('\n').slice(1); // 唔要 Header
+            tasks = [];
+            
+            rows.forEach(row => {
+                const cols = row.split(',');
+                if(cols.length >= 4) {
+                    const subject = cols[1].replace(/"/g, '').trim();
+                    const dateStr = cols[2].replace(/"/g, '').trim();
+                    const daysToGo = parseInt(cols[3].replace(/"/g, '').trim());
+                    
+                    // 只顯示仲未考、或者今日考嘅科目 (Days >= 0)
+                    if(subject && !isNaN(daysToGo) && daysToGo >= 0) {
+                        tasks.push({ subject, dateStr, daysToGo });
+                    }
+                }
+            });
+            
+            // 如果 Sheet 冇 Data 嘅 Default 顯示
+            if(tasks.length === 0) {
+                tasks = [{ subject: "暫時無考試！🎉", dateStr: "", daysToGo: "放鬆" }];
+            }
+        } catch (error) {
+            console.error("讀取資料失敗:", error);
+        }
+    }
+
+    function rotateDisplay() {
+        if (tasks.length === 0) return;
+        
+        const current = tasks[currentIndex % tasks.length];
+        
+        // 畫面上字
+        document.getElementById('subject').innerText = current.subject;
+        
+        if(typeof current.daysToGo === 'number') {
+            document.getElementById('days').innerText = current.daysToGo + " Days to go";
+            document.getElementById('target-date').innerText = "考試日期: " + current.dateStr;
+            // 如果得返 3 日或以下，變紅色提示小朋友
+            document.getElementById('days').style.color = current.daysToGo <= 3 ? '#ff4757' : '#2ed573';
+        } else {
+            document.getElementById('days').innerText = current.daysToGo;
+            document.getElementById('target-date').innerText = "";
+            document.getElementById('days').style.color = '#1e90ff';
+        }
+
+        currentIndex++;
+    }
+
+    // 初始化
+    async function start() {
+        await fetchTasks();
+        rotateDisplay();
+        
+        // 每 7 秒自動 Slide Show 轉下一個科目
+        setInterval(rotateDisplay, 7000);
+        
+        // 每 5 分鐘後台靜默更新一次 Google Sheet 數據，確保家長入咗新嘢會同步
+        setInterval(fetchTasks, 300000);
+    }
+
+    start();
+</script>
+</body>
+</html>
