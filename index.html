@@ -97,7 +97,7 @@
         document.getElementById('subject').innerText = current.subject;
         
         if(typeof current.daysToGo === 'number') {
-            document.getElementById('days').innerText = current.daysToGo + " Days to go";
+            document.getElementById('days').innerText = current.daysToGo + " Day(s) to go";
             document.getElementById('target-date').innerText = "考試日期: " + current.dateStr;
             // 如果得返 3 日或以下，變紅色提示小朋友
             document.getElementById('days').style.color = current.daysToGo <= 3 ? '#ff4757' : '#2ed573';
